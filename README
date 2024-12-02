@@ -1,0 +1,28 @@
+Larger resource files are not included in this repository. Please download data and weights from the following link: 
+
+https://drive.google.com/drive/folders/1cGClodLNMLjGP0E2DpenmUVU4U0rJj3I?usp=sharing
+
+Once downloaded, place the files in the following directory structure. The code will automatically look for the files in the specified directories. The repository is configured to ignore these subdirectories, so they will not be included in the repository in subsequent commits.
+
+├── data
+│   └── gavd_dataset
+│       ├── annotations
+│       |   └── gavd_annotations.pkl
+│       ├── dino_features
+│       |   └── cli...pkl
+│       ├── frame_images
+│       |   └── cli...
+│       |       └── cli...frame...jpg
+│       ├── gifs
+│       ├── landmarks
+│       |   └── cli...csv
+│       └── videos
+├── datasets
+├── demo_app
+├── models
+├── notebooks
+├── preprocessing
+└── weights
+    ├── cnn3d
+    ├── dino_lstm
+    └── mp_lstm
