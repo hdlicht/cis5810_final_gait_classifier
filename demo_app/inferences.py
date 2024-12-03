@@ -23,8 +23,11 @@ def load_dino_model(model_path):
 def predict(model, input_data):
     # Convert input data to a PyTorch tensor
     class_names = ['abnormal','antalgic','cerebral palsy','exercise','inebriated','myopathic','normal','parkinsons','pregnant','prosthetic','stroke','style']
-    input_tensor = torch.tensor(input_data, dtype=torch.float32)
-    input_tensor = input_tensor.unsqueeze(0)  # add batch dimension
+    if isinstance(input_data, np.ndarray):
+        input_data = torch.tensor(input_data, dtype=torch.float32)
+    else:
+        input_data = input_data.float()
+    input_tensor = input_data.unsqueeze(0)  # add batch dimension
 
     # Make a prediction
     with torch.no_grad():

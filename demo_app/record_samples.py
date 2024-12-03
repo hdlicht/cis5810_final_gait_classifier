@@ -17,6 +17,9 @@ def save_gif(frames, output_dir='demo_app/frames', fps=30):
 
 
 def start_recording(output_dir='demo_app/frames', seconds=3, count_down = 5):
+    # Create the output directory if it does not exist
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
     # Initialize the webcam
     cap = cv2.VideoCapture(4)
     # Check if the webcam is opened correctly
@@ -56,10 +59,10 @@ def start_recording(output_dir='demo_app/frames', seconds=3, count_down = 5):
             font = cv2.FONT_HERSHEY_SIMPLEX
             cv2.putText(frame, f"Recording in {seconds-now}", (5, frame_height//2),
                         font, 2, (0, 0, 255), 3, cv2.LINE_AA)
-            yield frame
-            # # Show the frame with countdown
-            # cv2.imshow('Webcam Feed', frame)
-            # cv2.waitKey(1)
+            
+            # Show the frame with countdown
+            cv2.imshow('Webcam Feed', frame)
+            cv2.waitKey(1)
 
     # Countdown function to show the countdown on the screen
     def record(seconds, output=True):
@@ -103,29 +106,17 @@ def start_recording(output_dir='demo_app/frames', seconds=3, count_down = 5):
                 cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (0, 255, 0), 2)
             
             # # Show the frame with countdown
-            # cv2.imshow('Webcam Feed', frame)
-            yield frame
+            cv2.imshow('Webcam Feed', frame)
             frame_count += 1
-            # cv2.waitKey(1)
+            cv2.waitKey(1)
 
         if frames != []:
             seq_marks = torch.tensor(seq_marks)
             return frames, seq_marks
-        return None, None
 
     # Show countdown before starting the recording
-    for frame in countdown(count_down):
-        yield frame
-    frames, seq_marks = None, None
-    recording = record(seconds)
-    try:
-        while True:
-            frame = next(recording)
-            yield frame
-    except StopIteration as e:
-        stuff = e.value
-        if stuff is not None:
-            frames, seq_marks = stuff
+    countdown(count_down)
+    frames, seq_marks = record(seconds)
             
 
     # Release everything when done
@@ -134,22 +125,23 @@ def start_recording(output_dir='demo_app/frames', seconds=3, count_down = 5):
 
     if frames is not None:
         # downsample the frames by 2 and reduce to 30 frames
-        frames = frames[::2]
-        frames = frames[:30]
+        downsampled_frames = frames[::3]
+        downsampled_frames = downsampled_frames[:30]
         # also downsample the landmarks
-        seq_marks = seq_marks[::2]
-        seq_marks = seq_marks[:30]
+        # seq_marks = seq_marks[::3]
+        # seq_marks = seq_marks[:30]
         # Save the frames as a GIF
-        save_gif(frames, output_dir)
+        save_gif(downsampled_frames, output_dir)
 
     return frames, seq_marks
 
 if __name__ == "__main__":
-    frames, seq_marks = start_recording(output_dir='demo_app/frames', seconds=5, count_down=3)
-    if frames.size(0) > 0:
+    name = '_right'
+    frames, seq_marks = start_recording(output_dir=f'demo_app/samples/{name}', seconds=4, count_down=3)
+    if len(frames) > 0:
         print("Recording completed")
         print("Frames saved in 'demo_app/frames' directory")
-        torch.save(seq_marks, 'demo_app/frames/landmarks.pt')
+        torch.save(seq_marks, f'demo_app/samples/{name}/landmarks.pt')
         print(seq_marks.shape)
     else:
         print("Recording failed")
