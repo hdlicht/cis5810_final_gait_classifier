@@ -6,15 +6,16 @@ from tqdm import tqdm
 from transformers import AutoFeatureExtractor, AutoModel
 
 
-def get_dino_features(frames):
-
-    # GPU device
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+def init_dino_model():
     # Load DINO model from Hugging Face (e.g., "facebook/dino-vitb16")
-    feature_extractor = AutoFeatureExtractor.from_pretrained("facebook/dino-vitb16")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     dino_model = AutoModel.from_pretrained("facebook/dino-vitb16").to(device)
     dino_model.eval()
+    return dino_model
+
+def get_dino_features(model, frames):
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Image transformation
     transform = transforms.Compose([
@@ -31,7 +32,7 @@ def get_dino_features(frames):
 
     batch_tensor = torch.stack(batch).to(device)
     with torch.no_grad():
-        output = dino_model(batch_tensor)
+        output = model(batch_tensor)
         features = output.last_hidden_state[:, 0, :]  # [CLS] token features for each image
-        features = features.cpu()  # Move to CPU if needed
+        features = features.detach().cpu()  # Move to CPU if needed
         return features
