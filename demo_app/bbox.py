@@ -9,7 +9,7 @@ def crop_square(frame, bbox):
     width = x_max - x_min
     height = y_max - y_min 
     # Determine the longer side (to make the square crop)
-    square_side = max(width, height)+10
+    square_side = max(width, height)+30
 
     # Calculate new top and left to center the crop
     center_x = x_min + width // 2

@@ -1,6 +1,5 @@
 import cv2
 import time
-import numpy as np
 import os
 from PIL import Image
 import torch
@@ -14,13 +13,11 @@ def save_gif(frames, output_dir='demo_app/frames'):
     with imageio.get_writer(os.path.join(output_dir,f"output.gif"), mode="I",loop=0) as writer:
         for frame in frames:
             # Covert from BGR to RGB format
-
-            frame_np = np.array(frame)
-            frame_np = cv2.cvtColor(frame_np, cv2.COLOR_BGR2RGB)
-            writer.append_data(frame_np)
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            writer.append_data(frame)
 
 
-def start_recording(output_dir='demo_app/frames', seconds=5, count_down = 3):
+def start_recording(output_dir='demo_app/frames', seconds=3, count_down = 2):
     # Initialize the webcam
     cap = cv2.VideoCapture(4)
     # Check if the webcam is opened correctly
@@ -39,41 +36,10 @@ def start_recording(output_dir='demo_app/frames', seconds=5, count_down = 3):
     # Start recording after countdown
         start_time = time.time()
         now = time.time()-start_time
-        ready = False
-        while not ready:
-            ret, frame = cap.read()
-            # rotate frame 90 degrees
-            frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
-            # convert to RGB
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            if not ret:
-                print("Error: Failed to grab frame")
-                break
-            visible = False
-            bbox = [0, 0, 1, 1]
-            now = time.time()-start_time
-            mp_stuff = get_landmarks(landmark_detector, frame)
-            if mp_stuff:
-                marks, bbox, visible = mp_stuff
-            if visible:
-                cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (0, 255, 0), 2)
-            else:
-                cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (0, 0, 255), 2)
-            # Add countdown text to the frame
-            font = cv2.FONT_HERSHEY_SIMPLEX
-            cv2.putText(frame, f"Get in the frame!", (5, frame_height//2), #mp_conf:.2f
-                        font, 1, (0, 0, 255), 3, cv2.LINE_AA)
-            yield frame
-            if visible:
-                ready = True
-        start_time = time.time()
-        now = time.time()-start_time
         while now < seconds:
             ret, frame = cap.read()
             # rotate frame 90 degrees
             frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
-            # convert to RGB
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             if not ret:
                 print("Error: Failed to grab frame")
                 break
@@ -89,80 +55,78 @@ def start_recording(output_dir='demo_app/frames', seconds=5, count_down = 3):
                 cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (0, 0, 255), 2)
             # Add countdown text to the frame
             font = cv2.FONT_HERSHEY_SIMPLEX
-            cv2.putText(frame, f"Start in {seconds-now:.2f}", (5, frame_height//2), #mp_conf:.2f
+            cv2.putText(frame, f"In {seconds-now:.2f}", (5, frame_height//2), #mp_conf:.2f
                         font, 2, (0, 0, 255), 3, cv2.LINE_AA)
             yield frame
             # # Show the frame with countdown
             # cv2.imshow('Webcam Feed', frame)
             # cv2.waitKey(1)
 
+    # Countdown function to show the countdown on the screen
     def record(seconds, output=True):
-        # Frame capture rate
-        frame_interval = 0.01  # Time between frames in seconds
-        
+        # Start recording after countdown
         start_time = time.time()
-        now = time.time() - start_time
+        now = time.time()-start_time
         frame_count = 0
         frames = []
+        seq_marks = []
 
         while now < seconds:
             ret, frame = cap.read()
             if not ret:
                 print("Error: Failed to grab frame")
                 break
-
-            # Rotate the frame
+            
             frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
-            # convert to RGB
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            
-            # Add frame to the list
-            frames.append(Image.fromarray(frame))
-            if output:
-                cv2.imwrite(f'{output_dir}/{frame_count:03d}.jpg', frame)
 
-            # Display recording text
+            now = time.time()-start_time
+            mp_stuff = get_landmarks(landmark_detector, frame)
+            visible = False
+            bbox = [0, 0, 1, 1]
+
+            if mp_stuff:
+                marks, bbox, visible = mp_stuff
+            if visible:
+                square_frame = crop_square(frame, bbox)
+
+                frames.append(Image.fromarray(square_frame))
+                seq_marks.append(marks)
+                if output:
+                    cv2.imwrite(f'{output_dir}/{frame_count:03d}.jpg', square_frame)
+
             font = cv2.FONT_HERSHEY_SIMPLEX
-            cv2.putText(frame, "Recording", (5, frame_height // 2),
+            cv2.putText(frame, f"Recording", (5, frame_height//2),
                         font, 2, (0, 255, 0), 3, cv2.LINE_AA)
+            # draw bounding box around the frame (red if not visible)
+            if not visible:
+                cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (0, 0, 255), 2)
+            else:
+                cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (0, 255, 0), 2)
             
-            # Show the frame
+            # # Show the frame with countdown
+            # cv2.imshow('Webcam Feed', frame)
             yield frame
             frame_count += 1
+            # cv2.waitKey(1)
 
-            # Sleep to maintain 30 FPS
-            time.sleep(frame_interval)
-            now = time.time() - start_time
-        print(f"Recorded {frame_count} frames")
-        return frames
+        if frames != []:
+            seq_marks = torch.tensor(seq_marks)
+            return frames, seq_marks
+        return None, None
 
     # Show countdown before starting the recording
     for frame in countdown(count_down):
         yield frame
-    frames = None
+    frames, seq_marks = None, None
     recording = record(seconds)
     try:
         while True:
             frame = next(recording)
             yield frame
     except StopIteration as e:
-        frames = e.value
-    
-    if frames:
-        cropped_frames = []
-        seq_marks = []
-        for frame in frames:
-            frame_np = np.array(frame)
-            mp_stuff = get_landmarks(landmark_detector, frame_np)
-            if mp_stuff:
-                marks, bbox, visible = mp_stuff
-                if not visible:
-                    print("Bad data. Try again.")
-                    return None, None
-                
-                seq_marks.append(marks)
-
-        seq_marks = torch.tensor(seq_marks) if seq_marks else None
+        stuff = e.value
+        if stuff is not None:
+            frames, seq_marks = stuff
             
 
     # Release everything when done

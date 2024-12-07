@@ -11,6 +11,7 @@ def init_dino_model():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     dino_model = AutoModel.from_pretrained("facebook/dino-vitb16").to(device)
     dino_model.eval()
+    print("DINO model loaded.")
     return dino_model
 
 def get_dino_features(model, frames):

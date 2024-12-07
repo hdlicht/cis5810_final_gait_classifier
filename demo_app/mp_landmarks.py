@@ -25,6 +25,8 @@ def get_landmarks(detector, frame):
         visibility = [lm.visibility for lm in results.pose_landmarks.landmark]
         # visible if landmarks 27-32 are visible
         visible = np.average(np.array(visibility[27:33])) > 0.5
-        marks = [value for lm in results.pose_landmarks.landmark[11:] for value in (lm.x, lm.y, lm.z)]
+        relevant_landmarks = [results.pose_landmarks.landmark[0]] + results.pose_landmarks.landmark[11:]
+
+        marks = [value for lm in relevant_landmarks for value in (lm.x, lm.y, lm.z)]
         
         return marks, bbox, visible

@@ -2,6 +2,7 @@ import os
 import torch
 from torch.utils.data import Dataset
 import pandas as pd
+from joint_angles import calculate_angles
 
 
 class MediapipeDataset(Dataset):
